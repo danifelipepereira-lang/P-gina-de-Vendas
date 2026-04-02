@@ -313,6 +313,26 @@ function goTab(t){
 }
 function selectCat(el,cat){document.querySelectorAll('.cat-chip').forEach(c=>c.classList.remove('active'));el.classList.add('active');selectedCategory=cat}
 
+const ML_CLIENT_ID='1448991186433932';
+const ML_CLIENT_SECRET='GzR3VyhBRK5prW0wY0MmXYoOdjhoaO9P';
+let mlAccessToken=null;
+
+async function getMLToken(){
+  if(mlAccessToken)return mlAccessToken;
+  try{
+    const r=await fetch('https://api.mercadolibre.com/oauth/token',{
+      method:'POST',
+      headers:{'Content-Type':'application/x-www-form-urlencoded','Accept':'application/json'},
+      body:`grant_type=client_credentials&client_id=${ML_CLIENT_ID}&client_secret=${ML_CLIENT_SECRET}`
+    });
+    if(!r.ok)throw new Error('Token error '+r.status);
+    const d=await r.json();
+    mlAccessToken=d.access_token;
+    setTimeout(()=>{mlAccessToken=null},d.expires_in*1000||21600000);
+    return mlAccessToken;
+  }catch(e){console.error('Token error:',e);return null}
+}
+
 async function searchProducts(){
   const q=document.getElementById('search-query').value.trim();
   const sort=document.getElementById('search-sort').value;
@@ -323,11 +343,12 @@ async function searchProducts(){
   btn.disabled=true;btn.textContent='Buscando...';
   res.innerHTML='<div class="loading"><div class="spinner"></div>Buscando no Mercado Livre...</div>';
   try{
-    let mlUrl=`https://api.mercadolibre.com/sites/MLB/search?limit=${limit}&sort=${sort}`;
-    if(q)mlUrl+=`&q=${encodeURIComponent(q)}`;
-    if(selectedCategory)mlUrl+=`&category=${selectedCategory}`;
-    const proxyUrl='https://corsproxy.io/?'+encodeURIComponent(mlUrl);
-    const r=await fetch(proxyUrl);
+    const token=await getMLToken();
+    let url=`https://api.mercadolibre.com/sites/MLB/search?limit=${limit}&sort=${sort}`;
+    if(q)url+=`&q=${encodeURIComponent(q)}`;
+    if(selectedCategory)url+=`&category=${selectedCategory}`;
+    const headers=token?{'Authorization':`Bearer ${token}`}:{};
+    const r=await fetch(url,{headers});
     if(!r.ok)throw new Error('Erro HTTP '+r.status);
     const d=await r.json();
     renderResults(d.results||[]);
