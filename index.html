@@ -323,14 +323,16 @@ async function searchProducts(){
   btn.disabled=true;btn.textContent='Buscando...';
   res.innerHTML='<div class="loading"><div class="spinner"></div>Buscando no Mercado Livre...</div>';
   try{
-    let url=`https://api.mercadolibre.com/sites/MLB/search?limit=${limit}&sort=${sort}`;
-    if(q)url+=`&q=${encodeURIComponent(q)}`;
-    if(selectedCategory)url+=`&category=${selectedCategory}`;
-    const r=await fetch(url);
+    let mlUrl=`https://api.mercadolibre.com/sites/MLB/search?limit=${limit}&sort=${sort}`;
+    if(q)mlUrl+=`&q=${encodeURIComponent(q)}`;
+    if(selectedCategory)mlUrl+=`&category=${selectedCategory}`;
+    const proxyUrl='https://api.allorigins.win/get?url='+encodeURIComponent(mlUrl);
+    const r=await fetch(proxyUrl);
     if(!r.ok)throw new Error('Erro HTTP '+r.status);
-    const d=await r.json();
+    const wrapper=await r.json();
+    const d=JSON.parse(wrapper.contents);
     renderResults(d.results||[]);
-  }catch(e){res.innerHTML=`<div class="empty"><div class="empty-icon">⚠</div>Erro: ${e.message}</div>`}
+  }catch(e){res.innerHTML=`<div class="empty"><div class="empty-icon">⚠</div>Erro ao buscar. Tente novamente.<br><small style="color:var(--muted)">${e.message}</small></div>`}
   btn.disabled=false;btn.textContent='⌕  Buscar';
 }
 
